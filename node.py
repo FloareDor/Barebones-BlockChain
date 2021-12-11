@@ -7,7 +7,7 @@ import socket
 
 UDP_IP_ADDRESS = "127.0.0.1"
 UDP_PORT_NO = 6789
-MINER_PORT_NO = 6790
+MINER_PORT_NO = 49000
 
 serverSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSock.bind((UDP_IP_ADDRESS, UDP_PORT_NO))
@@ -28,7 +28,7 @@ class Block:
 		else:
 			self.prev = prev
 
-	def create_block(self):
+	def mine_block(self):
 		filename = "blocks.json"
 		try:
 			if os.stat(filename).st_size == 0:
@@ -71,6 +71,56 @@ class Block:
 		f.close()
 		file.close()
 		return block_Hash
+	
+	def create_block(self):
+		filename = "blocks.json"
+		try:
+			if os.stat(filename).st_size == 0:
+				blocks = []
+				with open(filename, mode = 'w') as f:
+					json.dump(blocks,f)
+		except:
+			blocks = []
+			with open(filename, mode = 'w') as f:
+				json.dump(blocks,f)
+
+		if os.stat(filename).st_size == 0:
+			block_str = f"|{self.value}|{self.sender}|{self.receiver}|"
+		else:
+			block_str = f"|{self.value}|{self.sender}|{self.receiver}|{self.prev}|"
+			nonce = 0
+		block_Hash = 'x'
+		while str(block_Hash)[0:2] != "00":
+			nonce+=1
+			block_Hash = hash.sha256(bytes((block_str+str(nonce)).encode("utf-8"))).hexdigest()
+			print(f"mining: nonce -> {nonce}")
+		# serverSock.sendto(("MINE"+block_str).encode(), (UDP_IP_ADDRESS, MINER_PORT_NO))
+		# block_Hash, addr = serverSock.recvfrom(1024)
+		#block_Hash = str(block_Hash.decode()).replace("MINED", "")
+		print(f"Added a block : {block_Hash}")
+		if self.prev != None:
+			block = {
+				"value": self.value,
+				"sender": self.sender,
+				"receiver": self.receiver,
+				"hash": block_Hash,
+				"previous_Hash": self.prev
+			}
+		else:
+			block = {
+				"value": self.value,
+				"sender": self.sender,
+				"receiver": self.receiver,
+				"hash": block_Hash,
+			}
+		f = open('blocks.json', 'r')
+		blocks = json.load(f)
+		with open(filename, 'w') as file:
+			blocks.append(block)
+			json.dump(blocks, file)
+		f.close()
+		file.close()
+		return block_Hash
 
 
 
@@ -85,7 +135,7 @@ while True:
 		sender = trans_list[1]
 		receiver = trans_list[2]
 		block = Block(value, sender, receiver)
-		block.create_block()
+		block.mine_block()
 
 	
 	if str(data.decode()).islower() == "stop":

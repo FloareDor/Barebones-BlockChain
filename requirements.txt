@@ -1,0 +1,2 @@
+eth_account==0.5.6
+starkbank_ecdsa==2.0.3
