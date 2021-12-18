@@ -3,14 +3,13 @@ from ellipticcurve.privateKey import PrivateKey
 from ellipticcurve.publicKey import PublicKey
 
 import socket
+import datetime
 
 UDP_IP_ADDRESS = "127.0.0.1"
 UDP_PORT_NO = 6789
 
 
 clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-
 
 
 class Sender:
@@ -27,13 +26,17 @@ class Sender:
 	def sign(self, value, receiver):
 		trans_str = f"|{value}|{self.publicKey.toPem().replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()})|"
 		signature = Ecdsa.sign(trans_str, self.privateKey)
+		print(type(signature))
 		return signature, trans_str
 
 	def verify_sign(self, trans_str, sign):
 		return Ecdsa.verify(trans_str, sign, self.publicKey)
 
 	def send(self, value, receiver):
-		Message = f"{value}|{self.publicKey.toPem().replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}"
+		timestamp = str(datetime.datetime.now())
+		trans_str = f"|{value}|{self.publicKey.toPem().replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()})|{timestamp}"
+		signature = Ecdsa.sign(trans_str, self.privateKey)._toString()
+		Message = f"{value}|{self.publicKey.toPem().replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{timestamp}|{signature}"
 		try:
 			clientSock.sendto(Message.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
 			print("Transaction Successful!")
