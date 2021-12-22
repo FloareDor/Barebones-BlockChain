@@ -15,6 +15,10 @@ def get_Blockchain():
 		print(e)
 		return 0
 
+app.route("/get-txpool", methods = ["GET"])
+def get_TXPOOL():
+	from node import TX_POOL
+	return TX_POOL
 if __name__ == "__main__":
 	while True:
 		app.run(host = '127.0.0.1', port = 9999)

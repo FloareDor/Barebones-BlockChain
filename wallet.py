@@ -30,15 +30,21 @@ class Wallet():
 
 	def get_Balance(self):
 		blockchain = get("get-blockchain")
+		TXPOOL = get("get-txpool")
 		addr = self.public_Addr
 		try:
 			balance = 0
 			for block_index in blockchain:
-				for tx_index in blockchain[block_index]["TXPOOL"]:
-					if blockchain[block_index]["TXPOOL"][tx_index]["sender"] == addr:
-						balance-=float(blockchain[block_index]["TXPOOL"][tx_index]["value"])
-					elif blockchain[block_index]["TXPOOL"][tx_index]["receiver"] == addr:
-						balance+=float(blockchain[block_index]["TXPOOL"][tx_index]["value"])
+				for tx_Index in blockchain[block_index]["TXPOOL"]:
+					if blockchain[block_index]["TXPOOL"][tx_Index]["sender"] == addr:
+						balance-=float(blockchain[block_index]["TXPOOL"][tx_Index]["value"])
+					elif blockchain[block_index]["TXPOOL"][tx_Index]["receiver"] == addr:
+						balance+=float(blockchain[block_index]["TXPOOL"][tx_Index]["value"])
+			for tx_Index in TXPOOL:
+				if TXPOOL[tx_Index]["sender"] == addr:
+					balance-=float(TXPOOL[tx_Index]["value"])
+				elif TXPOOL[tx_Index]["receiver"] == addr:
+					balance+=float(TXPOOL[tx_Index]["value"])
 			return balance
 		except Exception as e:
 			print(e)
@@ -63,23 +69,28 @@ class Wallet():
 	
 	def get_All_transactions(self):
 		blockchain = get("get-blockchain")
+		TXPOOL = get("get-txpool")
 		addr = self.public_Addr
 		transactions = {}
 		ind = 0
 		try:
 			balance = 0
 			for block_index in blockchain:
-				for tx_index in blockchain[block_index]["TXPOOL"]:
-					if blockchain[block_index]["TXPOOL"][tx_index]["sender"] == addr or blockchain[block_index]["TXPOOL"][tx_index]["receiver"] == addr:
-						transactions[ind] = blockchain[block_index]["TXPOOL"][tx_index]
+				for tx_Index in blockchain[block_index]["TXPOOL"]:
+					if blockchain[block_index]["TXPOOL"][tx_Index]["sender"] == addr or blockchain[block_index]["TXPOOL"][tx_Index]["receiver"] == addr:
+						transactions[ind] = blockchain[block_index]["TXPOOL"][tx_Index]
 						ind+=1
-			return ind
+			for tx_Index in TXPOOL:
+				if TXPOOL[tx_Index]["sender"] == addr or TXPOOL[tx_Index]["receiver"]:
+					transactions[ind] = TXPOOL[tx_Index]
+					ind+=1
+			return transactions
 		except Exception as e:
 			print(e)
-			return ind
+			return transactions
+
 def in_Wallet(wallet):
 	print("Logged in to your wallet successfully!")
-
 	while True:
 		ans = input("Send monies or check balance?(send/balance)").lower()
 		if ans == "send":
