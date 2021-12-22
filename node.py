@@ -1,5 +1,5 @@
 import hashlib as hash
-import os
+
 from ellipticcurve.ecdsa import Ecdsa
 from ellipticcurve.privateKey import PrivateKey
 import json
@@ -34,8 +34,6 @@ class Crypto:
 			self.TXPOOL = {}
 			self.tx_index = 0
 
-
-
 	def update_variables(self):
 		if not self.block_Index == 0 and not self.tx_index == 0:
 			f = open('blockchain.json')
@@ -57,9 +55,7 @@ class Crypto:
 				for tx_index in blockchain[block_index]["TXPOOL"]:
 					if blockchain[block_index]["TXPOOL"][tx_index]["sender"] == address:
 						balance-=int(blockchain[block_index]["TXPOOL"][tx_index]["value"])
-			for block_index in blockchain:
-				for tx_index in blockchain[block_index]["TXPOOL"]:
-					if blockchain[block_index]["TXPOOL"][tx_index]["receiver"] == address:
+					elif blockchain[block_index]["TXPOOL"][tx_index]["receiver"] == address:
 						balance+=int(blockchain[block_index]["TXPOOL"][tx_index]["value"])
 			return balance
 		else:
@@ -78,7 +74,10 @@ class Crypto:
 		self.update_variables()
 		self.TXPOOL[str(self.tx_index)] = transaction
 		self.tx_index+=1
-	
+
+	def get_TXPOOL(self):
+		return self.TXPOOL
+
 	def create_Block(self, Nonce = None):
 		block_Timestamp = str(datetime.datetime.now())
 		self.update_variables()
@@ -107,44 +106,54 @@ class Crypto:
 		self.tx_index = 0
 		return block_Hash
 
-	def verify_Transaction(self, value, sender, receiver, timestamp, sign):
-		transaction_str = f"|{value}|{sender}|{receiver}|{timestamp}"
-		sender_Key = PublicKey.fromPem(f"-----BEGIN PUBLIC KEY-----\n{sender}\n-----END PUBLIC KEY-----")
+	def verify_Transaction(self, value, sender, receiver, sign, timestamp):
+		transaction_str = f"{value}|{sender}|{receiver}|{timestamp}"
+		
+		
+		#struct.upack("h", sign)
+		#print(sign)
 		sign = Signature._fromString(sign)
+		#print(sign)
 		balance = self.balance(sender)
+		#print(f"{transaction_str}\n{sign._toString()}\n{sender}")
+		sender_Key = PublicKey.fromString(sender)
+		#print(Ecdsa.verify(transaction_str, sign, sender_Key))
 		if not Ecdsa.verify(transaction_str, sign, sender_Key):
 			return -2
-		if value > balance:
+		#print(value)
+		if int(value) > balance and sender!="a163137532f511a4991eb105fa89f5ebb2953b82ceb08573e6bff3844c34c6a8eb316b321c1f59573b610c0d9c360fd2543d60364487fc0bd3e96da72bce22dc":
 			return -1
 		return 1
-
 
 if __name__ == "__main__":
 	print("Node setup successfully!")
 	block = Crypto()
-	x = block.balance("MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE5mBMkJUp7H7Tr6wrKNuKblwGnClwSQeI\nJFr9V5qelJ2lFiRFy/pLgTUDe+jU9emGYQjnvs9M1cL0uA29F8i5FA==")
-	print(x)
 	while True:
 		data, addr = serverSock.recvfrom(1024)
 		#print(str(data.decode()))
 		if str(data)[0:4] != "MINED" and data != None:
 			trans_list = str(data.decode()).split("|")
 			value = trans_list[0]
-			sender = trans_list[1]
+			sender = str(trans_list[1])
 			receiver = trans_list[2]
-			sign = trans_list[3]
+			timestamp = trans_list[3]
+			sign = trans_list[4]
 			#print(sign)
-			timestamp = trans_list[4]
-			if block.verify_Transaction(value, sender, receiver, sign, timestamp):
+			verified_val = block.verify_Transaction(value, sender, receiver, sign, timestamp)
+			if verified_val == 1:
 				block.transact(value, sender, receiver, sign, timestamp)
 				print(f"\n#################{block.tx_index}#################\n")
+			elif verified_val == -2 :
+				print("Authentication Failed!")
+			elif verified_val == -1:
+				print("Not enough Balance!")
 			else:
-				print("Verification Failed!")
-
+				print('wtf')
 			if block.tx_index == 3:
 				block.create_Block()
-
-		
+			print(addr)
+		elif data.decode() == "BAL":
+			serverSock.sendto("LETSGOOOOO".encode(), (addr[0], addr[1]))
 		if str(data.decode()).islower() == "stop":
 			break
 
