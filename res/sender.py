@@ -33,35 +33,33 @@ class Sender:
 		return signature, trans_str
 
 	def verify_sign(self, trans_str, sign):
-		
-		
 		return Ecdsa.verify(trans_str, sign, self.publicKey)
 	
 
 	def send(self, value, receiver):
 		timestamp = str(datetime.now(timezone.utc))
 		trans_str = f"{value}|{self.publicKey.toString()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{timestamp}"
-		
-		signature = Ecdsa.sign(trans_str, self.privateKey)
-		#print(signature)
+		signature = Ecdsa.sign(trans_str,self.privateKey)
+		print(signature)
 		signature = signature._toString()
-		#print(f"{trans_str}\n{signature}\n{self.publicKey.toString()}")
-		#print(Ecdsa.verify(trans_str, Signature._fromString(signature), self.publicKey))
 		#test = Signature._fromString(signature)
 		#print(test)
 		#print(signature)
-		Message = f"{value}|{self.publicKey.toString().replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{timestamp}|{signature}"
+		Message = f"{value}|{self.publicKey.toString()}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{timestamp}|{signature}"
+		trans_dict = {"trans_str":Message}
 		try:
-			clientSock.sendto(Message.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
+			#clientSock.sendto(Message.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
+			transaction = requests.get(f'http://127.0.0.1:9999/transact', json = trans_dict).text
 			#print(f"####{x}####")
 			print("Transaction Successful!")
 		except:
 			print("Connection Failed. Funds were not processed.")
 
-	def listen(self):
-		clientSock.sendto("BAL".encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
-		msg = clientSock.recvfrom(256)
-		print(msg)
+	def get_Balance(self,addr):
+		data = requests.get(f'http://127.0.0.1:9999/get-balance', json = {"address":self.publicKey.toString()}).text
+		balance = json.loads(data)
+		balance = balance["balance"]
+		return balance
 
 
 if __name__ == "__main__":
@@ -80,6 +78,7 @@ if __name__ == "__main__":
 		if account1.verify_sign(trans_str, signature) == True:
 			print("Verified.")
 			account1.send(value , receiver)
+			print(f"Your Balance: {account1.get_Balance(account2.publicKey.toString())}")
 		else:
 			print("Verification failed.")
 	

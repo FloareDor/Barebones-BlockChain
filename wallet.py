@@ -1,4 +1,4 @@
-from ellipticcurve import signature
+
 import requests
 import json
 from datetime import datetime, timezone
@@ -7,7 +7,6 @@ from ellipticcurve.privateKey import PrivateKey
 from ellipticcurve.publicKey import PublicKey
 import socket
 
-from ellipticcurve.signature import Signature
 
 UDP_IP_ADDRESS = "127.0.0.1"
 UDP_PORT_NO = 6789
@@ -19,75 +18,45 @@ clientSock.connect((UDP_IP_ADDRESS, UDP_PORT_NO))
 def get(command):
 	api = requests.get(f'http://127.0.0.1:9999/{command}')
 	data = api.text
-	data = json.loads(data)
+	if data != "-1":
+		data = json.loads(data)
 
 	return data
 
 class Wallet():
-	def __init__(self, public_Addr, private_Addr):
+	def __init__(self, public_Addr, private_Key):
 		self.public_Addr = public_Addr
-		self.private_Addr = private_Addr
+		self.private_Key = private_Key
 
 	def get_Balance(self):
-		blockchain = get("get-blockchain")
-		TXPOOL = get("get-txpool")
-		addr = self.public_Addr
-		try:
-			balance = 0
-			for block_index in blockchain:
-				for tx_Index in blockchain[block_index]["TXPOOL"]:
-					if blockchain[block_index]["TXPOOL"][tx_Index]["sender"] == addr:
-						balance-=float(blockchain[block_index]["TXPOOL"][tx_Index]["value"])
-					elif blockchain[block_index]["TXPOOL"][tx_Index]["receiver"] == addr:
-						balance+=float(blockchain[block_index]["TXPOOL"][tx_Index]["value"])
-			for tx_Index in TXPOOL:
-				if TXPOOL[tx_Index]["sender"] == addr:
-					balance-=float(TXPOOL[tx_Index]["value"])
-				elif TXPOOL[tx_Index]["receiver"] == addr:
-					balance+=float(TXPOOL[tx_Index]["value"])
-			return balance
-		except Exception as e:
-			print(e)
-			return 0
+		data = requests.get(f'http://127.0.0.1:9999/get-balance', json = {"address":self.public_Addr}).text
+		balance = json.loads(data)
+		balance = balance["balance"]
+		return balance
 
 	def send(self, value, receiver):
 		timestamp = str(datetime.now(timezone.utc))
 		trans_str = f"{value}|{self.public_Addr}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{timestamp}"
-		signature = Ecdsa.sign(trans_str,PrivateKey.fromString(self.private_Addr))
+		signature = Ecdsa.sign(trans_str,PrivateKey.fromString(self.private_Key))
 		print(signature)
 		signature = signature._toString()
 		#test = Signature._fromString(signature)
 		#print(test)
 		#print(signature)
 		Message = f"{value}|{self.public_Addr}|{receiver.replace('-----BEGIN PUBLIC KEY-----', '').replace('-----END PUBLIC KEY-----', '').strip()}|{timestamp}|{signature}"
+		trans_dict = {"trans_str":Message}
 		try:
-			clientSock.sendto(Message.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
+			#clientSock.sendto(Message.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
+			transaction = requests.get(f'http://127.0.0.1:9999/transact', json = trans_dict)
 			#print(f"####{x}####")
 			print("Transaction Successful!")
 		except:
 			print("Connection Failed. Funds were not processed.")
 	
 	def get_All_transactions(self):
-		blockchain = get("get-blockchain")
-		TXPOOL = get("get-txpool")
-		addr = self.public_Addr
-		transactions = {}
-		ind = 0
-		try:
-			balance = 0
-			for block_index in blockchain:
-				for tx_Index in blockchain[block_index]["TXPOOL"]:
-					if blockchain[block_index]["TXPOOL"][tx_Index]["sender"] == addr or blockchain[block_index]["TXPOOL"][tx_Index]["receiver"] == addr:
-						transactions[ind] = blockchain[block_index]["TXPOOL"][tx_Index]
-						ind+=1
-			for tx_Index in TXPOOL:
-				if TXPOOL[tx_Index]["sender"] == addr or TXPOOL[tx_Index]["receiver"]:
-					transactions[ind] = TXPOOL[tx_Index]
-					ind+=1
-			return transactions
-		except Exception as e:
-			print(e)
-			return transactions
+		data = requests.get(f'http://127.0.0.1:9999/get-all-transactions', json = {"address":self.public_Addr}).text
+		transactions = json.load(data)
+		return transactions
 
 def in_Wallet(wallet):
 	print("Logged in to your wallet successfully!")
@@ -136,7 +105,7 @@ def main():
 			if ans == "y":
 				private_Key = PrivateKey()
 				public_Key = private_Key.publicKey()
-				wallet = Wallet(public_Key, private_Key)
+				wallet = Wallet(public_Key.toString(), private_Key.toString())
 				print(f"Your Public Key / Address:\n{public_Key.toString()}")
 				print(f"Your Private Key (Keep this safe af):\n{private_Key.toString()}")
 				print("Logging you in....")
@@ -147,7 +116,6 @@ def main():
 						in_Wallet(wallet)
 					else:
 						print("Ok, waiting..")
-
 			elif ans == 'n':
 				print("Ok Byee")
 		else:
