@@ -47,10 +47,12 @@ class Wallet():
 		trans_dict = {"trans_str":Message}
 		try:
 			#clientSock.sendto(Message.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
-			transaction = requests.get(f'http://127.0.0.1:9999/transact', json = trans_dict)
+			response = requests.get(f'http://127.0.0.1:9999/transact', json = trans_dict)
 			#print(f"####{x}####")
-			print("Transaction Successful!")
-		except:
+			response = response.json()
+			print(response["response"])
+		except Exception as e:
+			print(e)
 			print("Connection Failed. Funds were not processed.")
 	
 	def get_All_transactions(self):
@@ -61,7 +63,7 @@ class Wallet():
 def in_Wallet(wallet):
 	print("Logged in to your wallet successfully!")
 	while True:
-		ans = input("Send monies or check balance?(send/balance)").lower()
+		ans = input("Send monies or check balance or link discord?(send/balance/discord)").lower()
 		if ans == "send":
 			try:
 				value = float(input("how many coins?"))
@@ -80,6 +82,17 @@ def in_Wallet(wallet):
 			if balance == "None":
 				balance = 0
 			print(f"Your current balance: {balance}")
+		elif ans == "discord":
+			res = input("Linking your discord account inevitably makes your funds prone to discord hecxser men. Do you still want to proceed?(Y/n)").lower()
+			if res == "y":
+				id = input("Please enter your discord id, including the four digit number: ")
+				json = {id:wallet.public_Addr}
+				print(json)
+				response = requests.get(f'http://127.0.0.1:9999/discord-link', json = json).text
+				print(response)
+
+
+
 
 			
 def main():

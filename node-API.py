@@ -7,10 +7,10 @@ UDP_IP_ADDRESS = "127.0.0.1"
 UDP_PORT_NO = 55555
 MINER_PORT_NO = 49000
 crypto = None
+crypto = Crypto()
 #serverSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #serverSock.bind((UDP_IP_ADDRESS, UDP_PORT_NO))
 app = Flask(__name__)
-
 
 
 @app.route("/get-blockchain", methods=["GET"])
@@ -22,6 +22,29 @@ def get_Blockchain():
 	except Exception as e:
 		print(e)
 		return {}
+
+@app.route("/discord-link", methods = ["GET"])
+def link_Discord():
+	data = flask.request.json
+	try:
+		try:
+			f = open('discord_Links.json')
+			addresses = json.load(f)
+			for id in data:
+				addresses[id] = data[id]
+			f.close()
+			with open('discord_Links.json', 'w') as f:
+				json.dump(addresses,f)
+			f.close()
+		except:
+			addresses = {}
+			for id in data:
+				addresses[id] = data[id]
+			with open('discord_Links.json', 'w') as f:
+				json.dump(addresses, f)
+	except Exception as e:
+		print(e)
+	return {"response": "Successful!"}
 
 @app.route("/transact", methods = ["GET"])
 def transact():
@@ -36,23 +59,59 @@ def transact():
 		receiver = trans_list[2]
 		timestamp = trans_list[3]
 		sign = trans_list[4]
+		response = "x"
 		verified_val = crypto.verify_Transaction(value, sender, receiver, timestamp, sign)
 		if verified_val == 1:
 			print(f"main TXPOOL index: {crypto.tx_index}")
 			print(f"main Block Index: {crypto.block_Index}")
-			crypto.transact(value, sender, receiver, timestamp, sign)
+			crypto.transact(value, sender, receiver, timestamp)
+			response = "Transactions Successful!"
 		elif verified_val == -2 :
-			print("Authentication Failed!")
+			response = "Authentication Failed!"
 		elif verified_val == -1:
-			print("Not enough Balance!")
+			response = "Not enough Balance!"
 		else:
 			print('wtf')
 		if crypto.tx_index == 3:
 			crypto.create_Block()
-		return "True"
+		return {"response":response}
 	except Exception as e:
 		print(e)
 		return "False"
+
+@app.route("/discord-transact", methods = ["GET"])
+def discord_Transact():
+	flag = True
+	try:
+		f = open('discord_Links.json')
+		addresses = json.load(f)
+	except:
+		addresses = {}
+		flag = False
+		with open('discord_Links.json', 'w') as f:
+			json.dump(addresses, f)
+	if not flag:
+		response = "Users haven't linked discord with the Florea account yet!"
+		return {"response": response}
+	TXPOOL = crypto.get_TXPOOL()
+	print(TXPOOL)
+	trans_dict = flask.request.json
+	trans_str = str(trans_dict["trans_str"])
+	trans_list = trans_str.split("|")
+	value = trans_list[0]
+	sender = addresses[str(trans_list[1])]
+	receiver = addresses[trans_list[2]]
+	timestamp = trans_list[3]
+	response = ""
+	if float(value) > crypto.get_Balance(sender) and sender != "a163137532f511a4991eb105fa89f5ebb2953b82ceb08573e6bff3844c34c6a8eb316b321c1f59573b610c0d9c360fd2543d60364487fc0bd3e96da72bce22dc":
+		response = "Not enough Balance!"
+	else:
+		crypto.transact(value, sender, receiver, timestamp)
+		response = "Transaction Successful!"
+	if crypto.tx_index == 3:
+		crypto.create_Block()
+	return {"response":response}
+
 
 @app.route("/get-balance", methods = ["GET"])
 def get_Balance():
@@ -74,7 +133,7 @@ def get_All_transactions():
 	return jsonify(transactions)
 
 if __name__ == "__main__":
-	crypto = Crypto()
+	
 	print("Node setup successfully!")
 	app.run(host = '127.0.0.1', port = 9999, debug = True)
 		

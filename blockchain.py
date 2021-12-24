@@ -80,15 +80,16 @@ class Crypto:
 					transactions[str(ind)] = self.TXPOOL[tx_index]
 					ind+=1
 		return transactions
-	def transact(self, value, sender, receiver, timestamp, sign):
+
+	def transact(self, value, sender, receiver, timestamp):
 		transaction = {
 			"value": value,
 			"sender": sender,
 			"receiver": receiver,
 			"timestamp": timestamp,
-			"signature": sign
-			
 		}
+		tx_hash = hash.sha3_256(str(transaction).encode()).hexdigest()
+		transaction["tx_hash"] = tx_hash
 		self.update_variables()
 		self.TXPOOL[str(self.tx_index)] = transaction
 		self.tx_index+=1
@@ -144,7 +145,7 @@ class Crypto:
 		if not Ecdsa.verify(transaction_str, sign, sender_Key):
 			return -2
 		if float(value) > balance and sender!="a163137532f511a4991eb105fa89f5ebb2953b82ceb08573e6bff3844c34c6a8eb316b321c1f59573b610c0d9c360fd2543d60364487fc0bd3e96da72bce22dc":
-			return 1
+			return -1
 		return 1
 
 
