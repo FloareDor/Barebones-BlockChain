@@ -8,8 +8,8 @@ from ellipticcurve.publicKey import PublicKey
 from ellipticcurve.signature import Signature
 
 UDP_IP_ADDRESS = "127.0.0.1"
-UDP_PORT_NO = 6789
-API_PORT_NO = 55555
+UDP_PORT_NO = 9999
+API_PORT_NO = 9999
 MINER_PORT_NO = 49000
 
 class Crypto:
@@ -99,27 +99,29 @@ class Crypto:
 	def get_TXPOOL(self):
 		return self.TXPOOL
 
-	def create_Block(self, Nonce = None):
+	def create_Block(self, mined_block_hash, Nonce = None):
 		try:
 			f = open('blockchain.json')
 			blockchain = json.load(f)
 			block_Timestamp = str(datetime.now(timezone.utc))
 			self.update_variables()
 			#self.block_Index+=1
-			block_Hash = hash.sha3_256(f"{self.TXPOOL}|{Nonce}|{block_Timestamp}".encode()).hexdigest()
+			#mined_block_hash = hash.sha3_256(f"{self.TXPOOL}|{Nonce}|{block_Timestamp}".encode()).hexdigest()
 			if self.block_Index > 0:
 				block = {
 					"TXPOOL": self.TXPOOL,
 					"Nonce": Nonce,
-					"hash": block_Hash,
-					"previous_Hash": blockchain[str(self.block_Index - 1)]["hash"]
+					"hash": mined_block_hash,
+					"previous_Hash": blockchain[str(self.block_Index - 1)]["hash"],
+					"timestamp": block_Timestamp
 				}
 			else:
 				block = {
 					"TXPOOL": self.TXPOOL,
 					"Nonce": Nonce,
-					"hash": block_Hash,
-					"previous_Hash": "0"
+					"hash": mined_block_hash,
+					"previous_Hash": "0",
+					"timestamp": block_Timestamp
 				}
 			with open('blockchain.json', 'w') as file:
 				blockchain[self.block_Index] = block
@@ -130,7 +132,7 @@ class Crypto:
 			self.block_Index+=1
 			self.TXPOOL = {}
 			TX_POOl = {}
-			return block_Hash
+			return mined_block_hash
 		except Exception as e:
 			print(f"found you: {e}")
 			return

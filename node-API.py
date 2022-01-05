@@ -3,23 +3,36 @@ import json
 import flask
 import json
 from blockchain import Crypto
+import requests
 UDP_IP_ADDRESS = "127.0.0.1"
-UDP_PORT_NO = 55555
+UDP_PORT_NO = 9999
+MINER_IP_ADDRESS = "127.0.0.1"
 MINER_PORT_NO = 49000
 crypto = None
 #serverSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #serverSock.bind((UDP_IP_ADDRESS, UDP_PORT_NO))
 app = Flask(__name__)
 
-
+def get_Hash():
+	TXPOOL = crypto.get_TXPOOL()
+	block_str = f"{TXPOOL}"
+	data = requests.get(f'http://{MINER_IP_ADDRESS}:{MINER_PORT_NO}/mine', json = {"block_str":block_str}).text
+	data = json.loads(data)
+	Nonce = data["Nonce"]
+	mined_block_hash = data["mined_block_hash"]
+	return mined_block_hash, Nonce
 
 @app.route("/get-blockchain", methods=["GET"])
 def get_Blockchain():
 	try:
 		f = open('blockchain.json')
 		blockchain = json.load(f)
+		f.close()
 		return blockchain
 	except Exception as e:
+		with open('blockchain.json', "w") as f:
+			json.dump({})
+		f.close()
 		print(e)
 		return {}
 
@@ -48,7 +61,9 @@ def transact():
 		else:
 			print('wtf')
 		if crypto.tx_index == 3:
-			crypto.create_Block()
+			mined_block_hash, Nonce = get_Hash()
+
+			crypto.create_Block(mined_block_hash, Nonce)
 		return "True"
 	except Exception as e:
 		print(e)
